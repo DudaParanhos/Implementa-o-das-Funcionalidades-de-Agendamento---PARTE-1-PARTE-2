@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import styled from 'styled-components/native';
 import { ScrollView, ViewStyle, TextStyle } from 'react-native';
 import { Button, ListItem, Text } from 'react-native-elements';
@@ -59,7 +59,8 @@ const DoctorDashboardScreen: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
+    setLoading(true);
     try {
       const storedAppointments = await AsyncStorage.getItem('@MedicalApp:appointments');
       if (storedAppointments) {
@@ -68,38 +69,39 @@ const DoctorDashboardScreen: React.FC = () => {
           (appointment) => appointment.doctorId === user?.id
         );
         setAppointments(doctorAppointments);
+      } else {
+        setAppointments([]);
       }
     } catch (error) {
       console.error('Erro ao carregar consultas:', error);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   const handleUpdateStatus = async (appointmentId: string, newStatus: 'confirmed' | 'cancelled') => {
     try {
       const storedAppointments = await AsyncStorage.getItem('@MedicalApp:appointments');
       if (storedAppointments) {
         const allAppointments: Appointment[] = JSON.parse(storedAppointments);
-        const updatedAppointments = allAppointments.map(appointment => {
-          if (appointment.id === appointmentId) {
-            return { ...appointment, status: newStatus };
-          }
-          return appointment;
-        });
+        const updatedAppointments = allAppointments.map(appointment =>
+          appointment.id === appointmentId
+            ? { ...appointment, status: newStatus }
+            : appointment
+        );
         await AsyncStorage.setItem('@MedicalApp:appointments', JSON.stringify(updatedAppointments));
-        loadAppointments(); // Recarrega a lista
+        loadAppointments();
       }
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
     }
   };
 
-  // Carrega as consultas quando a tela estiver em foco
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       loadAppointments();
-    }, [])
+    }, [loadAppointments])
   );
 
   return (
@@ -270,4 +272,5 @@ const ButtonContainer = styled.View`
   margin-top: 8px;
 `;
 
-export default DoctorDashboardScreen; 
+export default DoctorDashboardScreen;
+// ...existing code...
